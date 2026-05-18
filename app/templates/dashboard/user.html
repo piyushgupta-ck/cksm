@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}My Dashboard{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">My Dashboard</h1>
+    <p class="text-sm text-gray-500 mt-1">Your tickets and activity</p>
+</div>
+
+<div class="grid grid-cols-1 gap-5 sm:grid-cols-3 mb-8">
+    <div class="bg-white overflow-hidden shadow rounded-lg p-5">
+        <dt class="text-sm font-medium text-gray-500">Total Tickets</dt>
+        <dd class="text-2xl font-semibold text-gray-900">{{ total }}</dd>
+    </div>
+    <div class="bg-white overflow-hidden shadow rounded-lg p-5">
+        <dt class="text-sm font-medium text-gray-500">Active</dt>
+        <dd class="text-2xl font-semibold text-blue-600">{{ active }}</dd>
+    </div>
+    <div class="bg-white overflow-hidden shadow rounded-lg p-5">
+        <dt class="text-sm font-medium text-gray-500">Resolved</dt>
+        <dd class="text-2xl font-semibold text-green-600">{{ resolved }}</dd>
+    </div>
+</div>
+
+<div class="flex justify-end mb-4">
+    <a href="{{ url_for('tickets.create') }}" class="rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500">Create New Ticket</a>
+</div>
+
+<div class="bg-white shadow rounded-lg">
+    <div class="px-5 py-4 border-b border-gray-200">
+        <h3 class="text-lg font-medium text-gray-900">Recent Tickets</h3>
+    </div>
+    <ul class="divide-y divide-gray-200">
+        {% for ticket in recent_tickets %}
+        <li class="px-5 py-4 hover:bg-gray-50">
+            <a href="{{ url_for('tickets.view', ticket_id=ticket.ticket_id) }}" class="block">
+                <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium text-primary-600">{{ ticket.ticket_id }}</span>
+                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
+                        {% if ticket.status == 'Open' %}bg-yellow-100 text-yellow-800
+                        {% elif ticket.status == 'InProgress' %}bg-blue-100 text-blue-800
+                        {% elif ticket.status == 'Hold' %}bg-orange-100 text-orange-800
+                        {% elif ticket.status == 'Resolved' %}bg-green-100 text-green-800
+                        {% elif ticket.status == 'Closed' %}bg-gray-100 text-gray-800
+                        {% elif ticket.status == 'Rejected' %}bg-red-100 text-red-800
+                        {% elif ticket.status == 'Reopened' %}bg-purple-100 text-purple-800
+                        {% endif %}">{{ ticket.status }}</span>
+                </div>
+                <p class="text-sm text-gray-900 mt-1">{{ ticket.title }}</p>
+                <p class="text-xs text-gray-500 mt-1">{{ ticket.department.name }} &middot; {{ ticket.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+            </a>
+        </li>
+        {% endfor %}
+        {% if not recent_tickets %}
+        <li class="px-5 py-4 text-center text-sm text-gray-500">You haven't created any tickets yet.</li>
+        {% endif %}
+    </ul>
+</div>
+{% endblock %}

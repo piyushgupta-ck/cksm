@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% block title %}Knowledge Base{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Knowledge Base</h1>
+            <p class="text-sm text-gray-500 mt-1">Find answers, guides and how-tos</p>
+        </div>
+        {% if current_user.has_role('Admin') %}
+        <a href="{{ url_for('admin.kb_list') }}"
+           class="inline-flex items-center gap-1 bg-primary-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-primary-700">
+            Manage Articles
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Search -->
+    <form method="GET" action="{{ url_for('kb.search') }}" class="flex gap-2">
+        <input type="text" name="q" placeholder="Search knowledge base…"
+               class="flex-1 border border-gray-300 rounded-md px-4 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+        <button type="submit"
+                class="bg-primary-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-primary-700">
+            Search
+        </button>
+    </form>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Categories + Articles -->
+        <div class="lg:col-span-2 space-y-6">
+            {% if categories %}
+            {% for cat in categories %}
+            {% set cat_articles = cat.articles.filter_by(is_published=True).all()|sort(attribute='updated_at', reverse=True)|list %}{% set cat_articles = cat_articles[:5] %}
+            {% if cat_articles %}
+            <div class="bg-white rounded-lg shadow border border-gray-200">
+                <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                    <h2 class="text-base font-semibold text-gray-800">
+                        <a href="{{ url_for('kb.category', slug=cat.slug) }}"
+                           class="hover:text-primary-600">{{ cat.name }}</a>
+                    </h2>
+                    <a href="{{ url_for('kb.category', slug=cat.slug) }}"
+                       class="text-xs text-primary-600 hover:underline">View all</a>
+                </div>
+                <ul class="divide-y divide-gray-50">
+                    {% for art in cat_articles %}
+                    <li class="px-5 py-3 flex items-start justify-between hover:bg-gray-50">
+                        <a href="{{ url_for('kb.article', slug=art.slug) }}"
+                           class="text-sm text-primary-700 hover:text-primary-900 font-medium">{{ art.title }}</a>
+                        <span class="text-xs text-gray-400 ml-3 whitespace-nowrap">{{ art.views }} views</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+            {% endfor %}
+            {% else %}
+            <div class="bg-white rounded-lg shadow border border-gray-200 px-6 py-10 text-center text-gray-500">
+                No categories yet. Ask an admin to create articles.
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-4">
+            <!-- Recent -->
+            <div class="bg-white rounded-lg shadow border border-gray-200">
+                <div class="px-4 py-3 border-b border-gray-100">
+                    <h3 class="text-sm font-semibold text-gray-700">Recent Articles</h3>
+                </div>
+                <ul class="divide-y divide-gray-50">
+                    {% for art in recent %}
+                    <li class="px-4 py-2">
+                        <a href="{{ url_for('kb.article', slug=art.slug) }}"
+                           class="text-xs text-primary-700 hover:underline">{{ art.title }}</a>
+                    </li>
+                    {% else %}
+                    <li class="px-4 py-3 text-xs text-gray-400">None yet</li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <!-- Popular -->
+            <div class="bg-white rounded-lg shadow border border-gray-200">
+                <div class="px-4 py-3 border-b border-gray-100">
+                    <h3 class="text-sm font-semibold text-gray-700">Most Viewed</h3>
+                </div>
+                <ul class="divide-y divide-gray-50">
+                    {% for art in popular %}
+                    <li class="px-4 py-2 flex justify-between items-center">
+                        <a href="{{ url_for('kb.article', slug=art.slug) }}"
+                           class="text-xs text-primary-700 hover:underline">{{ art.title }}</a>
+                        <span class="text-xs text-gray-400">{{ art.views }}</span>
+                    </li>
+                    {% else %}
+                    <li class="px-4 py-3 text-xs text-gray-400">None yet</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

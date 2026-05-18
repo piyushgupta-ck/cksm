@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block title %}KB Search{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <h1 class="text-2xl font-bold text-gray-900">Knowledge Base Search</h1>
+
+    <!-- Search box -->
+    <form method="GET" action="{{ url_for('kb.search') }}" class="flex gap-2">
+        <input type="text" name="q" value="{{ query }}"
+               placeholder="Search knowledge base…"
+               class="flex-1 border border-gray-300 rounded-md px-4 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+        <button type="submit"
+                class="bg-primary-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-primary-700">
+            Search
+        </button>
+    </form>
+
+    {% if query %}
+    <p class="text-sm text-gray-500">
+        {% if results %}
+            Found <strong>{{ results|length }}</strong> result(s) for "<strong>{{ query }}</strong>"
+        {% else %}
+            No results found for "<strong>{{ query }}</strong>"
+        {% endif %}
+    </p>
+    {% endif %}
+
+    {% if results %}
+    <div class="bg-white rounded-lg shadow border border-gray-200 divide-y divide-gray-100">
+        {% for art in results %}
+        <div class="px-5 py-4 hover:bg-gray-50">
+            <a href="{{ url_for('kb.article', slug=art.slug) }}"
+               class="text-base font-medium text-primary-700 hover:text-primary-900">{{ art.title }}</a>
+            {% if art.category %}
+            <span class="ml-2 text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">{{ art.category.name }}</span>
+            {% endif %}
+            <p class="mt-1 text-xs text-gray-500 line-clamp-2">{{ art.content[:200] }}…</p>
+            <div class="mt-1 flex gap-3 text-xs text-gray-400">
+                <span>{{ art.views }} views</span>
+                <span>Updated {{ art.updated_at.strftime('%d %b %Y') }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% elif query %}
+    <div class="bg-white rounded-lg shadow border border-gray-200 px-6 py-10 text-center text-gray-500">
+        No articles found. Try different keywords.
+        <div class="mt-3">
+            <a href="{{ url_for('kb.index') }}" class="text-primary-600 hover:underline text-sm">Browse all articles</a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

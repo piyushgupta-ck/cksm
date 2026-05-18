@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+{% block title %}SLA Management{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+    <h1 class="text-2xl font-bold text-gray-900">SLA Management</h1>
+    <form method="POST" action="{{ url_for('sla.run_check') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit"
+                class="rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-500 shadow-sm">
+            Run SLA Check Now
+        </button>
+    </form>
+</div>
+
+<div class="space-y-8">
+
+    <!-- ── SLA Policies ──────────────────────────────────────────────── -->
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-gray-900">SLA Policies</h2>
+            <a href="{{ url_for('sla.create_policy') }}"
+               class="rounded-md bg-primary-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-primary-500">
+                + New Policy
+            </a>
+        </div>
+        {% if not policies %}
+        <div class="px-6 py-8 text-center text-sm text-gray-500">No SLA policies configured.</div>
+        {% else %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Department</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Priority</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">1st Response</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Resolution</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Biz Hours</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for p in policies %}
+                    <tr class="{% if not p.is_active %}opacity-50{% endif %}">
+                        <td class="px-6 py-3 text-sm font-medium text-gray-900">{{ p.name }}</td>
+                        <td class="px-6 py-3 text-sm text-gray-500">{{ p.department.name if p.department else 'All' }}</td>
+                        <td class="px-6 py-3 text-sm text-gray-500">{{ p.priority or 'All' }}</td>
+                        <td class="px-6 py-3 text-sm text-gray-700">{{ p.first_response_hours }}h</td>
+                        <td class="px-6 py-3 text-sm text-gray-700">{{ p.resolution_hours }}h</td>
+                        <td class="px-6 py-3 text-sm">
+                            {% if p.use_business_hours %}<span class="text-green-700">Yes</span>{% else %}<span class="text-gray-400">No</span>{% endif %}
+                        </td>
+                        <td class="px-6 py-3">
+                            <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium {{ 'bg-green-100 text-green-800' if p.is_active else 'bg-gray-100 text-gray-500' }}">
+                                {{ 'Active' if p.is_active else 'Inactive' }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-3 text-sm space-x-2 whitespace-nowrap">
+                            <a href="{{ url_for('sla.edit_policy', policy_id=p.id) }}"
+                               class="text-primary-600 hover:text-primary-800">Edit</a>
+                            <form method="POST" action="{{ url_for('sla.toggle_policy', policy_id=p.id) }}" class="inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="text-gray-500 hover:text-gray-700">
+                                    {{ 'Deactivate' if p.is_active else 'Activate' }}
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- ── Business Hours ────────────────────────────────────────────── -->
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900">Business Hours</h2>
+            <p class="text-xs text-gray-500 mt-0.5">Configure working days and hours used in SLA calculations.</p>
+        </div>
+        <form method="POST" action="{{ url_for('sla.save_business_hours') }}" class="p-6">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% set day_names = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'] %}
+            <div class="space-y-3">
+                {% for day in range(7) %}
+                {% set cfg = biz_hours | selectattr('day_of_week', 'eq', day) | first if biz_hours else none %}
+                <div class="flex items-center space-x-4">
+                    <label class="flex items-center space-x-2 w-36">
+                        <input type="checkbox" name="day_{{ day }}_working"
+                               {% if cfg and cfg.is_working_day %}checked{% elif not cfg and day < 5 %}checked{% endif %}
+                               class="rounded border-gray-300 text-primary-600">
+                        <span class="text-sm font-medium text-gray-700">{{ day_names[day] }}</span>
+                    </label>
+                    <input type="time" name="day_{{ day }}_start"
+                           value="{{ cfg.start_time.strftime('%H:%M') if cfg else '09:00' }}"
+                           class="rounded-md border-gray-300 ring-1 ring-gray-300 px-2 py-1 text-sm">
+                    <span class="text-sm text-gray-400">to</span>
+                    <input type="time" name="day_{{ day }}_end"
+                           value="{{ cfg.end_time.strftime('%H:%M') if cfg else '18:00' }}"
+                           class="rounded-md border-gray-300 ring-1 ring-gray-300 px-2 py-1 text-sm">
+                </div>
+                {% endfor %}
+            </div>
+            <div class="mt-4">
+                <button type="submit"
+                        class="rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-500">
+                    Save Business Hours
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- ── Holidays ──────────────────────────────────────────────────── -->
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900">Holiday Calendar</h2>
+        </div>
+        <div class="p-6">
+            <!-- Add holiday form -->
+            <form method="POST" action="{{ url_for('sla.add_holiday') }}" class="flex items-end space-x-3 mb-6">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Holiday Name</label>
+                    <input type="text" name="name" required placeholder="e.g. Republic Day"
+                           class="rounded-md border-gray-300 ring-1 ring-gray-300 px-3 py-1.5 text-sm focus:ring-2 focus:ring-primary-500 w-48">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Date</label>
+                    <input type="date" name="date" required
+                           class="rounded-md border-gray-300 ring-1 ring-gray-300 px-3 py-1.5 text-sm focus:ring-2 focus:ring-primary-500">
+                </div>
+                <button type="submit"
+                        class="rounded-md bg-primary-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-primary-500">
+                    Add Holiday
+                </button>
+            </form>
+
+            {% if not holidays %}
+            <p class="text-sm text-gray-500">No holidays configured.</p>
+            {% else %}
+            <ul class="divide-y divide-gray-100">
+                {% for h in holidays %}
+                <li class="flex items-center justify-between py-2">
+                    <div>
+                        <span class="text-sm font-medium text-gray-800">{{ h.name }}</span>
+                        <span class="ml-3 text-sm text-gray-500">{{ h.date.strftime('%d %b %Y') }}</span>
+                    </div>
+                    <form method="POST" action="{{ url_for('sla.delete_holiday', holiday_id=h.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="text-xs text-red-500 hover:text-red-700">Remove</button>
+                    </form>
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ── Escalation Rules ──────────────────────────────────────────── -->
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-gray-900">Escalation Rules</h2>
+            <a href="{{ url_for('sla.create_escalation_rule') }}"
+               class="rounded-md bg-primary-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-primary-500">
+                + New Rule
+            </a>
+        </div>
+        {% if not escalation_rules %}
+        <div class="px-6 py-8 text-center text-sm text-gray-500">No escalation rules configured.</div>
+        {% else %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Level</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Dept</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Priority</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">SLA Type</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Threshold</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Notify</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for rule in escalation_rules %}
+                    <tr class="{% if not rule.is_active %}opacity-50{% endif %}">
+                        <td class="px-6 py-3 text-sm font-medium text-gray-900">{{ rule.name }}</td>
+                        <td class="px-6 py-3">
+                            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold
+                                {% if rule.level == 1 %}bg-yellow-100 text-yellow-800
+                                {% elif rule.level == 2 %}bg-orange-100 text-orange-800
+                                {% else %}bg-red-100 text-red-800{% endif %}">
+                                L{{ rule.level }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-3 text-sm text-gray-500">{{ rule.department.name if rule.department else 'All' }}</td>
+                        <td class="px-6 py-3 text-sm text-gray-500">{{ rule.priority or 'All' }}</td>
+                        <td class="px-6 py-3 text-sm text-gray-700">{{ rule.sla_type | replace('_', ' ') | title }}</td>
+                        <td class="px-6 py-3 text-sm text-gray-700">{{ rule.breach_threshold_percent }}%</td>
+                        <td class="px-6 py-3 text-sm text-gray-700">{{ rule.notify_user.full_name if rule.notify_user else '—' }}</td>
+                        <td class="px-6 py-3">
+                            <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium {{ 'bg-green-100 text-green-800' if rule.is_active else 'bg-gray-100 text-gray-500' }}">
+                                {{ 'Active' if rule.is_active else 'Inactive' }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-3 text-sm space-x-2 whitespace-nowrap">
+                            <form method="POST" action="{{ url_for('sla.toggle_escalation_rule', rule_id=rule.id) }}" class="inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="text-gray-500 hover:text-gray-700">
+                                    {{ 'Deactivate' if rule.is_active else 'Activate' }}
+                                </button>
+                            </form>
+                            <form method="POST" action="{{ url_for('sla.delete_escalation_rule', rule_id=rule.id) }}" class="inline"
+                                  onsubmit="return confirm('Delete this rule?')">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="text-red-500 hover:text-red-700">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

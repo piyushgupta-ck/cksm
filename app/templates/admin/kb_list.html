@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% block title %}Manage Knowledge Base{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold text-gray-900">Knowledge Base Management</h1>
+        <div class="flex gap-2">
+            <a href="{{ url_for('kb.index') }}"
+               class="text-sm text-primary-600 hover:underline">View Public KB →</a>
+            <a href="{{ url_for('admin.kb_create') }}"
+               class="bg-primary-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-primary-700">
+                + New Article
+            </a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Articles Table -->
+        <div class="lg:col-span-2">
+            <div class="bg-white rounded-lg shadow border border-gray-200">
+                <div class="px-5 py-4 border-b border-gray-100">
+                    <h2 class="text-sm font-semibold text-gray-700">All Articles ({{ articles|length }})</h2>
+                </div>
+                {% if articles %}
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-100 text-sm">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600">Title</th>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600">Category</th>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600">Status</th>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600">Views</th>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-50">
+                            {% for art in articles %}
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-4 py-3">
+                                    <a href="{{ url_for('kb.article', slug=art.slug) }}"
+                                       class="font-medium text-primary-700 hover:text-primary-900">{{ art.title }}</a>
+                                </td>
+                                <td class="px-4 py-3 text-gray-600">
+                                    {{ art.category.name if art.category else '—' }}
+                                </td>
+                                <td class="px-4 py-3">
+                                    {% if art.is_published %}
+                                    <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-medium">Published</span>
+                                    {% else %}
+                                    <span class="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-xs font-medium">Draft</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-4 py-3 text-gray-500">{{ art.views }}</td>
+                                <td class="px-4 py-3 flex gap-2">
+                                    <a href="{{ url_for('admin.kb_edit', article_id=art.id) }}"
+                                       class="text-xs text-primary-600 hover:underline">Edit</a>
+                                    <form method="POST" action="{{ url_for('admin.kb_delete', article_id=art.id) }}"
+                                          onsubmit="return confirm('Delete this article?')">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="text-xs text-red-600 hover:underline">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="px-5 py-10 text-center text-gray-500 text-sm">
+                    No articles yet.
+                    <a href="{{ url_for('admin.kb_create') }}" class="text-primary-600 hover:underline">Create the first one</a>.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Categories Panel -->
+        <div class="space-y-4">
+            <div class="bg-white rounded-lg shadow border border-gray-200">
+                <div class="px-5 py-4 border-b border-gray-100">
+                    <h2 class="text-sm font-semibold text-gray-700">Categories</h2>
+                </div>
+
+                <!-- Add Category -->
+                <form method="POST" action="{{ url_for('admin.kb_create_category') }}" class="px-5 py-4 space-y-3 border-b border-gray-100">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="text" name="name" placeholder="Category name" required
+                           class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                    <input type="text" name="description" placeholder="Description (optional)"
+                           class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                    <input type="number" name="order" value="0" placeholder="Sort order"
+                           class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                    <button type="submit"
+                            class="w-full bg-gray-800 text-white px-3 py-2 rounded-md text-sm hover:bg-gray-700">
+                        + Add Category
+                    </button>
+                </form>
+
+                <!-- Category List -->
+                {% if categories %}
+                <ul class="divide-y divide-gray-50">
+                    {% for cat in categories %}
+                    <li class="px-5 py-3 flex items-center justify-between">
+                        <div>
+                            <a href="{{ url_for('kb.category', slug=cat.slug) }}"
+                               class="text-sm font-medium text-gray-700 hover:text-primary-600">{{ cat.name }}</a>
+                            <p class="text-xs text-gray-400">{{ cat.articles.filter_by(is_published=True).count() }} articles</p>
+                        </div>
+                        <form method="POST" action="{{ url_for('admin.kb_delete_category', cat_id=cat.id) }}"
+                              onsubmit="return confirm('Delete category?')">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="text-xs text-red-600 hover:underline">Del</button>
+                        </form>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="px-5 py-4 text-xs text-gray-400">No categories yet.</p>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

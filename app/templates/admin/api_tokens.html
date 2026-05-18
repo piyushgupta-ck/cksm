@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% block title %}API Tokens{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+
+    <h1 class="text-2xl font-bold text-gray-900">API Tokens</h1>
+    <p class="text-sm text-gray-500">Tokens allow external applications to access the CKSM REST API on your behalf.</p>
+
+    <!-- Create Token -->
+    <div class="bg-white rounded-lg shadow border border-gray-200 p-5">
+        <h2 class="text-sm font-semibold text-gray-700 mb-4">Issue New Token</h2>
+        <form method="POST" action="{{ url_for('admin.api_token_create') }}" class="flex gap-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="text" name="token_name" placeholder="Token name (e.g. Mobile App)" required
+                   class="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm">
+            <button type="submit"
+                    class="bg-primary-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-primary-700">
+                Generate
+            </button>
+        </form>
+    </div>
+
+    <!-- New Token Display (shown once) -->
+    {% if new_token %}
+    <div class="bg-green-50 border border-green-200 rounded-lg p-5 space-y-2">
+        <p class="text-sm font-semibold text-green-800">⚠ Copy this token now — it will NOT be shown again.</p>
+        <code class="block bg-white border border-green-300 rounded px-3 py-2 text-sm font-mono break-all text-gray-800">{{ new_token }}</code>
+    </div>
+    {% endif %}
+
+    <!-- Token List -->
+    <div class="bg-white rounded-lg shadow border border-gray-200">
+        <div class="px-5 py-4 border-b border-gray-100">
+            <h2 class="text-sm font-semibold text-gray-700">Your Tokens</h2>
+        </div>
+        {% if tokens %}
+        <table class="min-w-full divide-y divide-gray-100 text-sm">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left font-medium text-gray-600">Name</th>
+                    <th class="px-4 py-3 text-left font-medium text-gray-600">Prefix</th>
+                    <th class="px-4 py-3 text-left font-medium text-gray-600">Status</th>
+                    <th class="px-4 py-3 text-left font-medium text-gray-600">Last Used</th>
+                    <th class="px-4 py-3 text-left font-medium text-gray-600">Created</th>
+                    <th class="px-4 py-3"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50">
+                {% for t in tokens %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 font-medium text-gray-800">{{ t.name }}</td>
+                    <td class="px-4 py-3 font-mono text-gray-500">{{ t.prefix }}…</td>
+                    <td class="px-4 py-3">
+                        {% if t.is_active %}
+                        <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs">Active</span>
+                        {% else %}
+                        <span class="bg-gray-100 text-gray-500 px-2 py-0.5 rounded text-xs">Revoked</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-gray-500">
+                        {{ t.last_used_at.strftime('%d %b %Y %H:%M') if t.last_used_at else 'Never' }}
+                    </td>
+                    <td class="px-4 py-3 text-gray-500">{{ t.created_at.strftime('%d %b %Y') }}</td>
+                    <td class="px-4 py-3">
+                        {% if t.is_active %}
+                        <form method="POST" action="{{ url_for('admin.api_token_revoke', token_id=t.id) }}"
+                              onsubmit="return confirm('Revoke this token?')">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="text-xs text-red-600 hover:underline">Revoke</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="px-5 py-6 text-sm text-gray-400 text-center">No tokens yet.</p>
+        {% endif %}
+    </div>
+
+    <!-- API Quick Reference -->
+    <div class="bg-gray-50 border border-gray-200 rounded-lg p-5 space-y-3">
+        <h3 class="text-sm font-semibold text-gray-700">API Quick Reference</h3>
+        <p class="text-xs text-gray-500">Base URL: <code class="bg-white px-1 rounded border">/api/v1</code> — Send token as: <code class="bg-white px-1 rounded border">Authorization: Bearer &lt;token&gt;</code></p>
+        <div class="grid grid-cols-1 gap-1 text-xs font-mono text-gray-600">
+            <div class="flex gap-3"><span class="text-blue-600 w-12">GET</span> /api/v1/me</div>
+            <div class="flex gap-3"><span class="text-blue-600 w-12">GET</span> /api/v1/tickets?status=Open&page=1</div>
+            <div class="flex gap-3"><span class="text-green-600 w-12">POST</span> /api/v1/tickets</div>
+            <div class="flex gap-3"><span class="text-blue-600 w-12">GET</span> /api/v1/tickets/TKT-2026-000001</div>
+            <div class="flex gap-3"><span class="text-yellow-600 w-12">PATCH</span> /api/v1/tickets/TKT-2026-000001/status</div>
+            <div class="flex gap-3"><span class="text-green-600 w-12">POST</span> /api/v1/tickets/TKT-2026-000001/messages</div>
+            <div class="flex gap-3"><span class="text-blue-600 w-12">GET</span> /api/v1/departments</div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

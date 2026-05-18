@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Create Priority Rule{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Create Priority Rule</h1>
+    <a href="{{ url_for('admin.priority_rules') }}" class="text-sm text-primary-600 hover:text-primary-800">&larr; Back to Priority Rules</a>
+</div>
+
+{# ── Pass lookup data to JavaScript (identical structure to assignment rules) ── #}
+<script>
+const LOOKUP = {
+    departments:   {{ departments  | map(attribute='id') | list | tojson }},
+    dept_labels:   {{ departments  | map(attribute='name') | list | tojson }},
+
+    problems:      {{ problems     | map(attribute='id') | list | tojson }},
+    prob_labels:   {{ problems     | map(attribute='name') | list | tojson }},
+    prob_dept:     {{ problems     | map(attribute='department_id') | list | tojson }},
+
+    sub_problems:  {{ sub_problems | map(attribute='id') | list | tojson }},
+    sp_labels:     {{ sub_problems | map(attribute='name') | list | tojson }},
+    sp_prob:       {{ sub_problems | map(attribute='problem_id') | list | tojson }},
+
+    categories:    {{ categories   | map(attribute='id') | list | tojson }},
+    cat_labels:    {{ categories   | map(attribute='name') | list | tojson }},
+    cat_sp:        {{ categories   | map(attribute='sub_problem_id') | list | tojson }},
+
+    sub_categories:{{ sub_categories | map(attribute='id') | list | tojson }},
+    sc_labels:     {{ sub_categories | map(attribute='name') | list | tojson }},
+    sc_cat:        {{ sub_categories | map(attribute='category_id') | list | tojson }},
+
+    priorities: ["Low","Medium","High","Critical"]
+};
+
+let groups = [
+    { conditions: [{ field: 'department', operator: 'is', value_id: null, value_str: null }] }
+];
+</script>
+
+<form id="ruleForm" method="POST" class="space-y-6">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="conditions_json" id="conditions_json" value="[]">
+
+    {# ── Basic Info ── #}
+    <div class="bg-white shadow rounded-lg p-6 space-y-5">
+        <h2 class="text-base font-semibold text-gray-900 border-b border-gray-100 pb-3">Rule Details</h2>
+
+        <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <div class="sm:col-span-2">
+                <label class="block text-sm font-medium text-gray-700">Rule Name <span class="text-red-500">*</span></label>
+                <input type="text" name="name" required maxlength="200"
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm ring-1 ring-gray-300 py-1.5 px-3 focus:ring-2 focus:ring-primary-500 sm:text-sm"
+                       placeholder="e.g. Critical for IT Hardware outage">
+            </div>
+
+            <div class="sm:col-span-2">
+                <label class="block text-sm font-medium text-gray-700">Description</label>
+                <textarea name="description" rows="2"
+                          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm ring-1 ring-gray-300 py-1.5 px-3 focus:ring-2 focus:ring-primary-500 sm:text-sm"
+                          placeholder="Optional notes about this rule"></textarea>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Set Priority To <span class="text-red-500">*</span></label>
+                <select name="set_priority" required
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm ring-1 ring-gray-300 py-1.5 px-3 focus:ring-2 focus:ring-primary-500 sm:text-sm">
+                    {% for p in priority_values %}
+                    <option value="{{ p }}" {% if p == 'Medium' %}selected{% endif %}>{{ p }}</option>
+                    {% endfor %}
+                </select>
+                <p class="mt-1 text-xs text-gray-400">Priority assigned to matching tickets.</p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Evaluation Order</label>
+                <input type="number" name="priority_order" value="0" min="0" max="9999"
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm ring-1 ring-gray-300 py-1.5 px-3 focus:ring-2 focus:ring-primary-500 sm:text-sm">
+                <p class="mt-1 text-xs text-gray-400">Lower number = evaluated first. Default: 0</p>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap gap-6 pt-1">
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input type="hidden" name="is_active" value="0">
+                <input type="checkbox" name="is_active" value="1" checked
+                       class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+                <span class="text-sm font-medium text-gray-700">Active</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input type="hidden" name="stop_on_match" value="0">
+                <input type="checkbox" name="stop_on_match" value="1" checked
+                       class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+                <span class="text-sm font-medium text-gray-700">Stop evaluating further rules when this matches</span>
+            </label>
+        </div>
+    </div>
+
+    {# ── Condition Builder (identical to assignment rules) ── #}
+    <div class="bg-white shadow rounded-lg p-6">
+        <div class="flex items-center justify-between border-b border-gray-100 pb-3 mb-5">
+            <div>
+                <h2 class="text-base font-semibold text-gray-900">Conditions</h2>
+                <p class="text-xs text-gray-500 mt-0.5">
+                    Groups are <span class="font-semibold text-amber-700">OR</span>-ed &nbsp;·&nbsp;
+                    Conditions within a group are <span class="font-semibold text-blue-700">AND</span>-ed
+                </p>
+            </div>
+            <button type="button" onclick="addGroup()"
+                    class="rounded-md bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-200">
+                + Add Group (OR)
+            </button>
+        </div>
+
+        <div id="groupsContainer" class="space-y-4"></div>
+    </div>
+
+    <div class="flex justify-end gap-3">
+        <a href="{{ url_for('admin.priority_rules') }}"
+           class="rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+            Cancel
+        </a>
+        <button type="submit"
+                class="rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500">
+            Create Rule
+        </button>
+    </div>
+</form>
+
+{% include 'admin/_assignment_rule_js.html' %}
+{% endblock %}

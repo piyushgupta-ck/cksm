@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}{{ category.name }} — KB{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Breadcrumb -->
+    <nav class="flex items-center gap-2 text-sm text-gray-500">
+        <a href="{{ url_for('kb.index') }}" class="hover:text-primary-600">Knowledge Base</a>
+        <span>/</span>
+        <span class="text-gray-700 font-medium">{{ category.name }}</span>
+    </nav>
+
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">{{ category.name }}</h1>
+        {% if category.description %}
+        <p class="text-sm text-gray-500 mt-1">{{ category.description }}</p>
+        {% endif %}
+    </div>
+
+    {% if articles %}
+    <div class="bg-white rounded-lg shadow border border-gray-200 divide-y divide-gray-100">
+        {% for art in articles %}
+        <div class="px-5 py-4 hover:bg-gray-50">
+            <a href="{{ url_for('kb.article', slug=art.slug) }}"
+               class="text-base font-medium text-primary-700 hover:text-primary-900">{{ art.title }}</a>
+            {% if art.get_tags_list() %}
+            <div class="mt-1 flex flex-wrap gap-1">
+                {% for tag in art.get_tags_list() %}
+                <span class="bg-gray-100 text-gray-500 px-2 py-0.5 rounded text-xs">{{ tag }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+            <div class="mt-1 flex gap-3 text-xs text-gray-400">
+                <span>{{ art.views }} views</span>
+                <span>Updated {{ art.updated_at.strftime('%d %b %Y') }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-white rounded-lg shadow border border-gray-200 px-6 py-10 text-center text-gray-500">
+        No articles in this category yet.
+    </div>
+    {% endif %}
+
+    <a href="{{ url_for('kb.index') }}" class="text-sm text-primary-600 hover:underline">← Back to Knowledge Base</a>
+</div>
+{% endblock %}

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}CKSM{% endblock %} - Citykart Service Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { 50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd', 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a' },
+                    }
+                }
+            }
+        }
+    </script>
+    {% block head %}{% endblock %}
+</head>
+<body class="h-full">
+    {% if current_user.is_authenticated %}
+    <div class="min-h-full">
+        <nav class="bg-primary-800">
+            <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                <div class="flex h-16 items-center justify-between">
+                    <!-- Left: logo + nav links -->
+                    <div class="flex items-center">
+                        <a href="{{ url_for('dashboard.index') }}" class="text-white font-bold text-xl">CKSM</a>
+                        <div class="ml-10 flex items-baseline space-x-1">
+                            <a href="{{ url_for('dashboard.index') }}" class="text-gray-300 hover:bg-primary-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium">Dashboard</a>
+                            <a href="{{ url_for('tickets.index') }}" class="text-gray-300 hover:bg-primary-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium">Tickets</a>
+                            <a href="{{ url_for('tickets.create') }}" class="text-gray-300 hover:bg-primary-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium">New Ticket</a>
+                            <a href="{{ url_for('kb.index') }}" class="text-gray-300 hover:bg-primary-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium">KB</a>
+                            {% if current_user.has_role('Agent') or current_user.has_role('Admin') %}
+                            <a href="{{ url_for('approvals.my_requests') }}" class="text-gray-300 hover:bg-primary-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium">My Approvals</a>
+                            {% endif %}
+                            {% if current_user.has_role('Admin') %}
+                            <a href="{{ url_for('approvals.index') }}" class="text-gray-300 hover:bg-primary-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium">Approvals</a>
+                            <a href="{{ url_for('sla.index') }}" class="text-gray-300 hover:bg-primary-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium">SLA</a>
+                            <a href="{{ url_for('reports.index') }}" class="text-gray-300 hover:bg-primary-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium">Reports</a>
+                            <a href="{{ url_for('admin.form_templates') }}" class="text-gray-300 hover:bg-primary-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium">Forms</a>
+                            <a href="{{ url_for('admin.kb_list') }}" class="text-gray-300 hover:bg-primary-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium">KB Admin</a>
+                            <a href="{{ url_for('admin.api_tokens') }}" class="text-gray-300 hover:bg-primary-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium">API</a>
+                            <a href="{{ url_for('admin.index') }}" class="text-gray-300 hover:bg-primary-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium">Admin</a>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Right: bell + user info -->
+                    <div class="flex items-center space-x-4">
+                        <!-- Notification Bell -->
+                        <div class="relative" id="notif-wrapper">
+                            <button id="notif-btn" onclick="toggleNotifDropdown()"
+                                    class="relative text-gray-300 hover:text-white p-1 rounded-full focus:outline-none">
+                                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                          d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"/>
+                                </svg>
+                                <span id="notif-badge"
+                                      class="hidden absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-bold leading-none"></span>
+                            </button>
+
+                            <!-- Dropdown -->
+                            <div id="notif-dropdown"
+                                 class="hidden absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
+                                <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                                    <span class="text-sm font-semibold text-gray-700">Notifications</span>
+                                    <a href="{{ url_for('notifications.index') }}"
+                                       class="text-xs text-primary-600 hover:text-primary-800">View all</a>
+                                </div>
+                                <div id="notif-list" class="divide-y divide-gray-100 max-h-72 overflow-y-auto">
+                                    <div class="px-4 py-3 text-sm text-gray-500 text-center">Loading…</div>
+                                </div>
+                                <div class="px-4 py-2 border-t border-gray-100 bg-gray-50 rounded-b-lg">
+                                    <form method="POST" action="{{ url_for('notifications.mark_all_read') }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit"
+                                                class="text-xs text-gray-500 hover:text-gray-700 w-full text-center">
+                                            Mark all as read
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <span class="text-gray-300 text-sm">{{ current_user.full_name }} <span class="text-gray-400">({{ current_user.role.name }})</span></span>
+                        <a href="{{ url_for('auth.change_password') }}" class="text-gray-300 hover:text-white text-sm">Password</a>
+                        <a href="{{ url_for('auth.logout') }}" class="bg-primary-900 text-white rounded-md px-3 py-2 text-sm font-medium hover:bg-primary-700">Logout</a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="mb-4 space-y-2">
+                {% for category, message in messages %}
+                <div class="rounded-md p-4 {% if category == 'error' %}bg-red-50 text-red-800{% elif category == 'success' %}bg-green-50 text-green-800{% elif category == 'info' %}bg-blue-50 text-blue-800{% else %}bg-yellow-50 text-yellow-800{% endif %}">
+                    <p class="text-sm font-medium">{{ message }}</p>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <!-- Notification JS -->
+    <script>
+    let notifOpen = false;
+
+    function toggleNotifDropdown() {
+        notifOpen = !notifOpen;
+        const dd = document.getElementById('notif-dropdown');
+        dd.classList.toggle('hidden', !notifOpen);
+        if (notifOpen) loadNotifications();
+    }
+
+    // Close when clicking outside
+    document.addEventListener('click', function(e) {
+        const wrapper = document.getElementById('notif-wrapper');
+        if (wrapper && !wrapper.contains(e.target)) {
+            notifOpen = false;
+            document.getElementById('notif-dropdown').classList.add('hidden');
+        }
+    });
+
+    function loadNotifications() {
+        fetch('/notifications/api/recent')
+            .then(r => r.json())
+            .then(data => {
+                const list = document.getElementById('notif-list');
+                if (!data.length) {
+                    list.innerHTML = '<div class="px-4 py-3 text-sm text-gray-500 text-center">No notifications</div>';
+                    return;
+                }
+                list.innerHTML = data.map(n => {
+                    const link = n.ticket_id ? '/tickets/' + n.ticket_id : '/notifications/';
+                    const unreadClass = n.is_read ? '' : 'bg-blue-50';
+                    return `<a href="${link}" class="block px-4 py-3 hover:bg-gray-50 ${unreadClass}">
+                        <p class="text-xs font-semibold text-gray-800 truncate">${n.title}</p>
+                        <p class="text-xs text-gray-500 mt-0.5 truncate">${n.message}</p>
+                        <p class="text-xs text-gray-400 mt-0.5">${n.created_at}</p>
+                    </a>`;
+                }).join('');
+            })
+            .catch(() => {
+                document.getElementById('notif-list').innerHTML =
+                    '<div class="px-4 py-3 text-sm text-gray-500 text-center">Could not load</div>';
+            });
+    }
+
+    function refreshBadge() {
+        fetch('/notifications/api/unread-count')
+            .then(r => r.json())
+            .then(data => {
+                const badge = document.getElementById('notif-badge');
+                if (data.count > 0) {
+                    badge.textContent = data.count > 9 ? '9+' : data.count;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            })
+            .catch(() => {});
+    }
+
+    // Initial load + poll every 30s
+    refreshBadge();
+    setInterval(refreshBadge, 30000);
+    </script>
+
+    {% else %}
+    <div class="min-h-full">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="mx-auto max-w-md mt-4 space-y-2">
+            {% for category, message in messages %}
+            <div class="rounded-md p-4 {% if category == 'error' %}bg-red-50 text-red-800{% elif category == 'success' %}bg-green-50 text-green-800{% else %}bg-blue-50 text-blue-800{% endif %}">
+                <p class="text-sm font-medium">{{ message }}</p>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        {% block content_unauthenticated %}{% endblock %}
+    </div>
+    {% endif %}
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

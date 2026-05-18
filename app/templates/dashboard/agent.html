@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Agent Dashboard{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">My Dashboard</h1>
+    <p class="text-sm text-gray-500 mt-1">Your assigned tickets and workload</p>
+</div>
+
+<div class="grid grid-cols-1 gap-5 sm:grid-cols-4 mb-8">
+    <div class="bg-white overflow-hidden shadow rounded-lg p-5">
+        <dt class="text-sm font-medium text-gray-500">Assigned to Me</dt>
+        <dd class="text-2xl font-semibold text-gray-900">{{ assigned_total }}</dd>
+    </div>
+    <div class="bg-white overflow-hidden shadow rounded-lg p-5">
+        <dt class="text-sm font-medium text-gray-500">In Progress</dt>
+        <dd class="text-2xl font-semibold text-blue-600">{{ assigned_open }}</dd>
+    </div>
+    <div class="bg-white overflow-hidden shadow rounded-lg p-5">
+        <dt class="text-sm font-medium text-gray-500">On Hold</dt>
+        <dd class="text-2xl font-semibold text-orange-600">{{ assigned_hold }}</dd>
+    </div>
+    <div class="bg-white overflow-hidden shadow rounded-lg p-5">
+        <dt class="text-sm font-medium text-gray-500">Resolved/Closed</dt>
+        <dd class="text-2xl font-semibold text-green-600">{{ assigned_resolved }}</dd>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-5 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900">My Active Tickets</h3>
+        </div>
+        <ul class="divide-y divide-gray-200">
+            {% for ticket in pending_tickets %}
+            <li class="px-5 py-4 hover:bg-gray-50">
+                <a href="{{ url_for('tickets.view', ticket_id=ticket.ticket_id) }}" class="block">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium text-primary-600">{{ ticket.ticket_id }}</span>
+                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
+                            {% if ticket.status == 'Open' %}bg-yellow-100 text-yellow-800
+                            {% elif ticket.status == 'InProgress' %}bg-blue-100 text-blue-800
+                            {% elif ticket.status == 'Hold' %}bg-orange-100 text-orange-800
+                            {% elif ticket.status == 'Reopened' %}bg-purple-100 text-purple-800
+                            {% endif %}">{{ ticket.status }}</span>
+                    </div>
+                    <p class="text-sm text-gray-900 mt-1 truncate">{{ ticket.title }}</p>
+                    <p class="text-xs text-gray-500 mt-1">{{ ticket.department.name }} &middot; {{ ticket.created_at.strftime('%Y-%m-%d') }}</p>
+                </a>
+            </li>
+            {% endfor %}
+            {% if not pending_tickets %}
+            <li class="px-5 py-4 text-center text-sm text-gray-500">No active tickets.</li>
+            {% endif %}
+        </ul>
+    </div>
+
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-5 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900">Unassigned Tickets</h3>
+        </div>
+        <ul class="divide-y divide-gray-200">
+            {% for ticket in unassigned_tickets %}
+            <li class="px-5 py-4 hover:bg-gray-50">
+                <a href="{{ url_for('tickets.view', ticket_id=ticket.ticket_id) }}" class="block">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium text-primary-600">{{ ticket.ticket_id }}</span>
+                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-800">Open</span>
+                    </div>
+                    <p class="text-sm text-gray-900 mt-1 truncate">{{ ticket.title }}</p>
+                    <p class="text-xs text-gray-500 mt-1">{{ ticket.department.name }} &middot; {{ ticket.created_at.strftime('%Y-%m-%d') }}</p>
+                </a>
+            </li>
+            {% endfor %}
+            {% if not unassigned_tickets %}
+            <li class="px-5 py-4 text-center text-sm text-gray-500">No unassigned tickets.</li>
+            {% endif %}
+        </ul>
+    </div>
+</div>
+{% endblock %}

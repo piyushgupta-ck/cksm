@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Create Form Template{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+    <h1 class="text-2xl font-bold text-gray-900">Create Form Template</h1>
+    <a href="{{ url_for('admin.form_templates') }}" class="text-sm text-primary-600 hover:text-primary-800">&larr; Back</a>
+</div>
+
+<div class="bg-white shadow rounded-lg p-6 max-w-xl">
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Template Name <span class="text-red-500">*</span></label>
+            <input type="text" name="name" required
+                   class="block w-full rounded-md border-gray-300 ring-1 ring-gray-300 px-3 py-1.5 text-sm focus:ring-2 focus:ring-primary-500"
+                   placeholder="e.g. IT Hardware Request Form">
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mb-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                <select name="department_id"
+                        class="block w-full rounded-md border-gray-300 ring-1 ring-gray-300 px-3 py-1.5 text-sm focus:ring-2 focus:ring-primary-500">
+                    <option value="">All Departments</option>
+                    {% for d in departments %}
+                    <option value="{{ d.id }}">{{ d.name }}</option>
+                    {% endfor %}
+                </select>
+                <p class="text-xs text-gray-400 mt-1">Leave blank for a global template.</p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Problem</label>
+                <select name="problem_id"
+                        class="block w-full rounded-md border-gray-300 ring-1 ring-gray-300 px-3 py-1.5 text-sm focus:ring-2 focus:ring-primary-500">
+                    <option value="">All Problems</option>
+                    {% for p in problems %}
+                    <option value="{{ p.id }}">{{ p.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="mb-6">
+            <label class="flex items-center space-x-2">
+                <input type="checkbox" name="is_active" checked class="rounded border-gray-300 text-primary-600">
+                <span class="text-sm text-gray-700">Active</span>
+            </label>
+        </div>
+
+        <div class="flex space-x-3">
+            <button type="submit"
+                    class="rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-500">
+                Create &amp; Add Fields
+            </button>
+            <a href="{{ url_for('admin.form_templates') }}"
+               class="rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

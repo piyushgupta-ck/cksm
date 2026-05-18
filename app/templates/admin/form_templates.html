@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Form Templates{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+    <h1 class="text-2xl font-bold text-gray-900">Dynamic Form Templates</h1>
+    <a href="{{ url_for('admin.create_form_template') }}"
+       class="rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500">
+        + New Template
+    </a>
+</div>
+
+<div class="bg-white shadow rounded-lg overflow-hidden">
+    <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Template Name</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Department</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Problem</th>
+                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Fields</th>
+                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+            </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+            {% for tmpl in templates %}
+            <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ tmpl.name }}</td>
+                <td class="px-6 py-4 text-sm text-gray-500">{{ tmpl.department.name if tmpl.department else '— All —' }}</td>
+                <td class="px-6 py-4 text-sm text-gray-500">{{ tmpl.problem.name if tmpl.problem else '— All —' }}</td>
+                <td class="px-6 py-4 text-sm text-gray-600 text-center">{{ tmpl.fields.count() }}</td>
+                <td class="px-6 py-4 text-center">
+                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
+                        {% if tmpl.is_active %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-600{% endif %}">
+                        {{ 'Active' if tmpl.is_active else 'Inactive' }}
+                    </span>
+                </td>
+                <td class="px-6 py-4 text-sm">
+                    <a href="{{ url_for('admin.form_template_detail', template_id=tmpl.id) }}"
+                       class="text-primary-600 hover:text-primary-800 font-medium">Manage Fields</a>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" class="px-6 py-8 text-center text-sm text-gray-400">
+                    No form templates yet.
+                    <a href="{{ url_for('admin.create_form_template') }}" class="text-primary-600 hover:underline">Create one</a>.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="mt-4">
+    <a href="{{ url_for('admin.index') }}" class="text-sm text-primary-600 hover:text-primary-800">&larr; Back to Admin</a>
+</div>
+{% endblock %}

@@ -1,0 +1,54 @@
+PostgreSQL Setup for CKSM
+=========================
+
+1. Install PostgreSQL
+---------------------
+Ubuntu/Debian:
+    sudo apt update
+    sudo apt install postgresql postgresql-contrib
+
+Windows:
+    Download installer from https://www.postgresql.org/download/windows/
+
+2. Create database and user
+----------------------------
+    sudo -u postgres psql
+
+    CREATE USER cksm_user WITH PASSWORD 'strong_password_here';
+    CREATE DATABASE cksm_db OWNER cksm_user;
+    GRANT ALL PRIVILEGES ON DATABASE cksm_db TO cksm_user;
+    \q
+
+3. Update .env
+--------------
+    DATABASE_URL=postgresql://cksm_user:strong_password_here@localhost:5432/cksm_db
+
+4. Install Python driver (already in requirements.txt)
+------------------------------------------------------
+    pip install psycopg2-binary
+
+5. Run migrations
+-----------------
+    flask db upgrade
+
+    (If starting fresh with no previous migrations:)
+    flask db init
+    flask db migrate -m "initial schema"
+    flask db upgrade
+
+6. Seed the database
+--------------------
+    python seed.py
+
+7. Verify connection
+--------------------
+    flask shell
+    >>> from app import db
+    >>> db.engine.execute("SELECT version()").fetchone()
+
+Notes
+-----
+- pool_pre_ping=True and pool_recycle=300 are already set in config.py to handle
+  dropped idle connections (common with PostgreSQL behind firewalls).
+- Use pg_dump for backups:
+    pg_dump -U cksm_user cksm_db > backup_$(date +%Y%m%d).sql

@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block title %}Approvals{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">Approvals</h1>
+        <p class="text-sm text-gray-500 mt-1">Approval requests waiting for your decision.</p>
+    </div>
+    <a href="{{ url_for('approvals.my_requests') }}" class="text-sm text-primary-600 hover:text-primary-800">
+        My submitted requests &rarr;
+    </a>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in messages %}
+  <div class="mb-4 rounded-md px-4 py-3 text-sm font-medium
+    {% if cat == 'success' %}bg-green-50 text-green-800 border border-green-200
+    {% elif cat == 'error' %}bg-red-50 text-red-800 border border-red-200
+    {% else %}bg-blue-50 text-blue-800 border border-blue-200{% endif %}">{{ msg }}</div>
+  {% endfor %}
+{% endwith %}
+
+<!-- Pending -->
+<div class="mb-8">
+    <h2 class="text-lg font-semibold text-gray-800 mb-3">
+        Pending
+        {% if pending %}
+        <span class="ml-2 inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800">{{ pending|length }}</span>
+        {% endif %}
+    </h2>
+
+    {% if not pending %}
+    <div class="bg-white shadow rounded-lg px-6 py-10 text-center text-gray-400 text-sm">
+        No pending approvals for you right now.
+    </div>
+    {% else %}
+    <div class="space-y-4">
+        {% for req in pending %}
+        <div class="bg-white shadow rounded-lg p-6">
+            <div class="flex items-start justify-between gap-4">
+                <div class="flex-1 min-w-0">
+                    <div class="flex flex-wrap items-center gap-2 mb-1">
+                        <a href="{{ url_for('tickets.view', ticket_id=req.ticket.ticket_id) }}"
+                           class="text-base font-semibold text-primary-700 hover:underline">
+                            {{ req.ticket.ticket_id }}
+                        </a>
+                        {% set pc = {'Low':'bg-green-100 text-green-800','Medium':'bg-yellow-100 text-yellow-800','High':'bg-orange-100 text-orange-800','Critical':'bg-red-100 text-red-800'} %}
+                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {{ pc.get(req.ticket.priority, 'bg-gray-100 text-gray-700') }}">
+                            {{ req.ticket.priority }}
+                        </span>
+                        <span class="text-sm text-gray-600 truncate">{{ req.ticket.title }}</span>
+                    </div>
+                    <p class="text-sm text-gray-500">
+                        Requested by
+                        <span class="font-medium text-gray-700">{{ req.requester.full_name }}</span>
+                        &middot;
+                        {{ req.created_at.strftime('%d %b %Y %H:%M') }}
+                    </p>
+                    {% if req.reason %}
+                    <p class="mt-2 text-sm text-gray-700 bg-gray-50 rounded p-2 border-l-4 border-yellow-400">
+                        <span class="font-medium">Reason:</span> {{ req.reason }}
+                    </p>
+                    {% endif %}
+                </div>
+
+                <!-- Approve / Reject -->
+                <div class="flex-shrink-0 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    <!-- Approve with optional remarks -->
+                    <button onclick="openApproveModal({{ req.id }}, '{{ req.ticket.ticket_id }}')"
+                            class="inline-flex items-center justify-center rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-500 shadow-sm">
+                        ✓ Approve
+                    </button>
+                    <!-- Reject with remarks -->
+                    <button onclick="openRejectModal({{ req.id }}, '{{ req.ticket.ticket_id }}')"
+                            class="inline-flex items-center justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 shadow-sm">
+                        ✗ Reject
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- Recent decisions -->
+<div>
+    <h2 class="text-lg font-semibold text-gray-800 mb-3">Recent Decisions</h2>
+    {% if not recent %}
+    <div class="bg-white shadow rounded-lg px-6 py-8 text-center text-gray-400 text-sm">
+        No past decisions yet.
+    </div>
+    {% else %}
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ticket</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Requested By</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reason</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Decision</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actioned</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for req in recent %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <a href="{{ url_for('tickets.view', ticket_id=req.ticket.ticket_id) }}"
+                           class="text-sm font-medium text-primary-600 hover:underline">{{ req.ticket.ticket_id }}</a>
+                        <p class="text-xs text-gray-400 truncate max-w-[160px]">{{ req.ticket.title }}</p>
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{{ req.requester.full_name }}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500 max-w-xs truncate">{{ req.reason or '—' }}</td>
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
+                            {% if req.status == 'approved' %}bg-green-100 text-green-800
+                            {% else %}bg-red-100 text-red-800{% endif %}">
+                            {{ req.status | capitalize }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                        {{ req.resolved_at.strftime('%d %b %Y %H:%M') if req.resolved_at else '—' }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Approve Modal -->
+<div id="approve-modal" class="hidden fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+        <h3 class="text-lg font-semibold text-gray-900 mb-1">Approve Request</h3>
+        <p id="approve-ticket-label" class="text-sm text-gray-500 mb-4"></p>
+        <form id="approve-form" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Remarks (optional)</label>
+                <textarea name="remarks" rows="3"
+                          class="block w-full rounded-md border-gray-300 ring-1 ring-gray-300 py-1.5 px-3 text-sm focus:ring-2 focus:ring-green-500"
+                          placeholder="Notes on the approval…"></textarea>
+            </div>
+            <div class="flex justify-end gap-3">
+                <button type="button" onclick="document.getElementById('approve-modal').classList.add('hidden')"
+                        class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50">Cancel</button>
+                <button type="submit"
+                        class="rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500">Approve</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Reject Modal -->
+<div id="reject-modal" class="hidden fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+        <h3 class="text-lg font-semibold text-gray-900 mb-1">Reject Request</h3>
+        <p id="reject-ticket-label" class="text-sm text-gray-500 mb-4"></p>
+        <form id="reject-form" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Remarks (optional)</label>
+                <textarea name="remarks" rows="3"
+                          class="block w-full rounded-md border-gray-300 ring-1 ring-gray-300 py-1.5 px-3 text-sm focus:ring-2 focus:ring-red-500"
+                          placeholder="Reason for rejection…"></textarea>
+            </div>
+            <div class="flex justify-end gap-3">
+                <button type="button" onclick="document.getElementById('reject-modal').classList.add('hidden')"
+                        class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50">Cancel</button>
+                <button type="submit"
+                        class="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500">Reject</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openApproveModal(approvalId, ticketId) {
+    document.getElementById('approve-form').action = '/approvals/' + approvalId + '/approve';
+    document.getElementById('approve-ticket-label').textContent = 'Ticket: ' + ticketId;
+    document.getElementById('approve-modal').classList.remove('hidden');
+}
+function openRejectModal(approvalId, ticketId) {
+    document.getElementById('reject-form').action = '/approvals/' + approvalId + '/reject';
+    document.getElementById('reject-ticket-label').textContent = 'Ticket: ' + ticketId;
+    document.getElementById('reject-modal').classList.remove('hidden');
+}
+</script>
+{% endblock %}

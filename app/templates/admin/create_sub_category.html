@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Create Sub-Category{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Create Sub-Category</h1>
+    <a href="{{ url_for('admin.sub_categories') }}" class="text-sm text-primary-600 hover:text-primary-800">&larr; Back to Sub-Categories</a>
+</div>
+
+<form method="POST" class="bg-white shadow rounded-lg p-6 max-w-lg space-y-6">
+    {{ form.hidden_tag() }}
+
+    <!-- Name -->
+    <div>
+        {{ form.name.label(class="block text-sm font-medium text-gray-700") }}
+        {{ form.name(class="mt-1 block w-full rounded-md border-gray-300 shadow-sm ring-1 ring-gray-300 py-1.5 px-3 focus:ring-2 focus:ring-primary-500 sm:text-sm") }}
+        {% for error in form.name.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}
+    </div>
+
+    <!-- Step 1: Department -->
+    <div>
+        <label class="block text-sm font-medium text-gray-700">Department</label>
+        <select id="sel_dept"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm ring-1 ring-gray-300 py-1.5 px-3 focus:ring-2 focus:ring-primary-500 sm:text-sm"
+                onchange="filterProblems()">
+            <option value="">— Select Department —</option>
+            {% for d in departments %}
+            <option value="{{ d.id }}">{{ d.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- Step 2: Problem -->
+    <div>
+        <label class="block text-sm font-medium text-gray-700">Problem</label>
+        <select id="sel_problem"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm ring-1 ring-gray-300 py-1.5 px-3 focus:ring-2 focus:ring-primary-500 sm:text-sm"
+                onchange="filterSubProblems()">
+            <option value="">— Select Problem —</option>
+            {% for p in problems %}
+            <option value="{{ p.id }}" data-dept="{{ p.department_id }}">{{ p.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- Step 3: Sub-Problem -->
+    <div>
+        <label class="block text-sm font-medium text-gray-700">Sub-Problem</label>
+        <select id="sel_sub_problem"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm ring-1 ring-gray-300 py-1.5 px-3 focus:ring-2 focus:ring-primary-500 sm:text-sm"
+                onchange="filterCategories()">
+            <option value="">— Select Sub-Problem —</option>
+            {% for sp in sub_problems %}
+            <option value="{{ sp.id }}" data-problem="{{ sp.problem_id }}">{{ sp.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- Step 4: Category (actual FK submitted) -->
+    <div>
+        <label class="block text-sm font-medium text-gray-700">Category <span class="text-red-500">*</span></label>
+        <select id="sel_category" name="category_id" required
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm ring-1 ring-gray-300 py-1.5 px-3 focus:ring-2 focus:ring-primary-500 sm:text-sm">
+            <option value="">— Select Category —</option>
+            {% for c in categories %}
+            <option value="{{ c.id }}" data-subproblem="{{ c.sub_problem_id }}">{{ c.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- Active -->
+    <div class="flex items-center space-x-2">
+        {{ form.is_active(class="rounded border-gray-300 text-primary-600 focus:ring-primary-500") }}
+        {{ form.is_active.label(class="text-sm font-medium text-gray-700") }}
+    </div>
+
+    <div class="flex justify-end space-x-3">
+        <a href="{{ url_for('admin.sub_categories') }}"
+           class="rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">Cancel</a>
+        {{ form.submit(class="rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 cursor-pointer") }}
+    </div>
+</form>
+
+<script>
+function filterProblems() {
+    const deptId = document.getElementById('sel_dept').value;
+    const probSel = document.getElementById('sel_problem');
+    probSel.querySelectorAll('option[data-dept]').forEach(opt => {
+        opt.hidden = deptId !== '' && opt.dataset.dept !== deptId;
+    });
+    if (probSel.value && deptId !== '' && probSel.options[probSel.selectedIndex].dataset.dept !== deptId) {
+        probSel.value = '';
+    }
+    filterSubProblems();
+}
+
+function filterSubProblems() {
+    const problemId = document.getElementById('sel_problem').value;
+    const spSel = document.getElementById('sel_sub_problem');
+    spSel.querySelectorAll('option[data-problem]').forEach(opt => {
+        opt.hidden = problemId !== '' && opt.dataset.problem !== problemId;
+    });
+    if (spSel.value && problemId !== '' && spSel.options[spSel.selectedIndex].dataset.problem !== problemId) {
+        spSel.value = '';
+    }
+    filterCategories();
+}
+
+function filterCategories() {
+    const spId = document.getElementById('sel_sub_problem').value;
+    const catSel = document.getElementById('sel_category');
+    catSel.querySelectorAll('option[data-subproblem]').forEach(opt => {
+        opt.hidden = spId !== '' && opt.dataset.subproblem !== spId;
+    });
+    if (catSel.value && spId !== '' && catSel.options[catSel.selectedIndex].dataset.subproblem !== spId) {
+        catSel.value = '';
+    }
+}
+</script>
+{% endblock %}

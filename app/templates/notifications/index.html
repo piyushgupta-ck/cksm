@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Notifications{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+    <h1 class="text-2xl font-bold text-gray-900">Notifications</h1>
+    <form method="POST" action="{{ url_for('notifications.mark_all_read') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit"
+                class="text-sm text-primary-600 hover:text-primary-800 font-medium">
+            Mark all as read
+        </button>
+    </form>
+</div>
+
+<div class="bg-white shadow rounded-lg divide-y divide-gray-200">
+    {% if not notifications %}
+    <div class="px-6 py-12 text-center text-gray-500">
+        <svg class="mx-auto h-10 w-10 text-gray-300 mb-3" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"/>
+        </svg>
+        <p class="font-medium">No notifications yet</p>
+    </div>
+    {% else %}
+    {% for n in notifications %}
+    <div class="px-6 py-4 flex items-start space-x-4 {% if not n.is_read %}bg-blue-50{% endif %}">
+        <!-- Icon -->
+        <div class="flex-shrink-0 mt-0.5">
+            {% if n.type in ('assigned',) %}
+            <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700 text-xs font-bold">A</span>
+            {% elif n.type in ('replied',) %}
+            <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-green-700 text-xs font-bold">R</span>
+            {% elif n.type in ('status_changed',) %}
+            <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-yellow-100 text-yellow-700 text-xs font-bold">S</span>
+            {% elif n.type in ('escalated', 'sla_breach') %}
+            <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-red-100 text-red-700 text-xs font-bold">!</span>
+            {% elif n.type in ('approval_requested', 'approval_resolved') %}
+            <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-purple-100 text-purple-700 text-xs font-bold">P</span>
+            {% else %}
+            <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-700 text-xs font-bold">N</span>
+            {% endif %}
+        </div>
+
+        <!-- Body -->
+        <div class="flex-1 min-w-0">
+            <div class="flex items-start justify-between">
+                <div>
+                    <p class="text-sm font-semibold text-gray-900">{{ n.title }}</p>
+                    <p class="text-sm text-gray-600 mt-0.5">{{ n.message }}</p>
+                </div>
+                <span class="ml-4 flex-shrink-0 text-xs text-gray-400 whitespace-nowrap">
+                    {{ n.created_at.strftime('%d %b %Y %H:%M') }}
+                </span>
+            </div>
+            {% if n.ticket %}
+            <a href="{{ url_for('tickets.view', ticket_id=n.ticket.ticket_id) }}"
+               class="mt-1 inline-block text-xs text-primary-600 hover:text-primary-800">
+                View {{ n.ticket.ticket_id }} &rarr;
+            </a>
+            {% endif %}
+        </div>
+
+        <!-- Unread dot -->
+        {% if not n.is_read %}
+        <div class="flex-shrink-0 mt-2">
+            <span class="inline-block h-2 w-2 rounded-full bg-primary-500"></span>
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+    {% endif %}
+</div>
+{% endblock %}

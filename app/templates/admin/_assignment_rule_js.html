@@ -1,0 +1,194 @@
+{# Shared condition-builder JavaScript for create + edit assignment rule pages.
+   Requires: LOOKUP object and groups array already defined before this include. #}
+<script>
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function optionsFor(field, selectedValueId, selectedValueStr) {
+    let html = '<option value="">-- Select value --</option>';
+
+    if (field === 'priority') {
+        LOOKUP.priorities.forEach(p => {
+            const sel = (p === selectedValueStr) ? ' selected' : '';
+            html += `<option value="${p}"${sel}>${p}</option>`;
+        });
+        return html;
+    }
+
+    const configs = {
+        department:   { ids: LOOKUP.departments,    labels: LOOKUP.dept_labels },
+        problem:      { ids: LOOKUP.problems,        labels: LOOKUP.prob_labels },
+        sub_problem:  { ids: LOOKUP.sub_problems,    labels: LOOKUP.sp_labels },
+        category:     { ids: LOOKUP.categories,      labels: LOOKUP.cat_labels },
+        sub_category: { ids: LOOKUP.sub_categories,  labels: LOOKUP.sc_labels },
+    };
+
+    const cfg = configs[field];
+    if (!cfg) return html;
+
+    cfg.ids.forEach((id, i) => {
+        const sel = (id === selectedValueId) ? ' selected' : '';
+        html += `<option value="${id}"${sel}>${cfg.labels[i]}</option>`;
+    });
+    return html;
+}
+
+function makeValueInput(field, valueId, valueStr, gIdx, cIdx) {
+    const isEnum = (field === 'priority');
+    const selClass = 'block w-full rounded-md border-gray-300 shadow-sm ring-1 ring-gray-300 py-1.5 px-2 text-sm focus:ring-2 focus:ring-primary-500';
+
+    if (isEnum) {
+        return `<select class="${selClass}" onchange="updateConditionValueStr(${gIdx},${cIdx},this.value)">
+                  ${optionsFor(field, null, valueStr)}
+                </select>`;
+    } else {
+        return `<select class="${selClass}" onchange="updateConditionValueId(${gIdx},${cIdx},parseInt(this.value)||null)">
+                  ${optionsFor(field, valueId, null)}
+                </select>`;
+    }
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+
+function renderGroups() {
+    const container = document.getElementById('groupsContainer');
+    if (!container) return;
+
+    let html = '';
+    groups.forEach((group, gIdx) => {
+        const isLast = (gIdx === groups.length - 1);
+
+        html += `
+        <div class="border border-gray-200 rounded-lg overflow-hidden">
+          <div class="bg-gray-50 px-4 py-2.5 flex items-center justify-between">
+            <span class="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+              Condition Group ${gIdx + 1}
+              <span class="ml-1.5 text-blue-700 font-bold">(AND)</span>
+            </span>
+            <button type="button" onclick="removeGroup(${gIdx})"
+                    class="text-red-400 hover:text-red-600 text-xs font-medium">✕ Remove Group</button>
+          </div>
+
+          <div class="px-4 py-3 space-y-2" id="condGroup${gIdx}">`;
+
+        group.conditions.forEach((cond, cIdx) => {
+            html += `
+            <div class="flex items-center gap-2 flex-wrap" id="cond_${gIdx}_${cIdx}">
+
+              <select class="rounded-md border-gray-300 shadow-sm ring-1 ring-gray-300 py-1.5 px-2 text-sm focus:ring-2 focus:ring-primary-500 min-w-[140px]"
+                      onchange="updateConditionField(${gIdx},${cIdx},this.value)">
+                <option value="department"   ${cond.field==='department'   ? 'selected':''}>Department</option>
+                <option value="problem"      ${cond.field==='problem'      ? 'selected':''}>Problem</option>
+                <option value="sub_problem"  ${cond.field==='sub_problem'  ? 'selected':''}>Sub-Problem</option>
+                <option value="category"     ${cond.field==='category'     ? 'selected':''}>Category</option>
+                <option value="sub_category" ${cond.field==='sub_category' ? 'selected':''}>Sub-Category</option>
+                <option value="priority"     ${cond.field==='priority'     ? 'selected':''}>Priority</option>
+              </select>
+
+              <select class="rounded-md border-gray-300 shadow-sm ring-1 ring-gray-300 py-1.5 px-2 text-sm focus:ring-2 focus:ring-primary-500 min-w-[90px]"
+                      onchange="updateConditionOperator(${gIdx},${cIdx},this.value)">
+                <option value="is"     ${cond.operator==='is'     ? 'selected':''}>is</option>
+                <option value="is_not" ${cond.operator==='is_not' ? 'selected':''}>is not</option>
+              </select>
+
+              <div class="flex-1 min-w-[180px]">
+                ${makeValueInput(cond.field, cond.value_id, cond.value_str, gIdx, cIdx)}
+              </div>
+
+              <button type="button" onclick="removeCondition(${gIdx},${cIdx})"
+                      class="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50" title="Remove condition">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>`;
+        });
+
+        html += `
+          </div>
+          <div class="px-4 pb-3">
+            <button type="button" onclick="addCondition(${gIdx})"
+                    class="text-xs text-primary-600 hover:text-primary-800 font-medium flex items-center gap-1">
+              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+              </svg>
+              Add Condition (AND)
+            </button>
+          </div>
+        </div>`;
+
+        // OR separator between groups
+        if (!isLast) {
+            html += `
+        <div class="flex items-center gap-3 py-1">
+          <div class="flex-1 h-px bg-gray-200"></div>
+          <span class="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">OR</span>
+          <div class="flex-1 h-px bg-gray-200"></div>
+        </div>`;
+        }
+    });
+
+    if (groups.length === 0) {
+        html = `<p class="text-sm text-gray-400 text-center py-6 italic">
+                  No conditions — rule will <strong>never</strong> match.
+                  Click "Add Group (OR)" to add conditions.
+                </p>`;
+    }
+
+    container.innerHTML = html;
+}
+
+// ── Mutators ─────────────────────────────────────────────────────────────────
+
+function addGroup() {
+    groups.push({ conditions: [{ field: 'department', operator: 'is', value_id: null, value_str: null }] });
+    renderGroups();
+}
+
+function removeGroup(gIdx) {
+    groups.splice(gIdx, 1);
+    renderGroups();
+}
+
+function addCondition(gIdx) {
+    groups[gIdx].conditions.push({ field: 'department', operator: 'is', value_id: null, value_str: null });
+    renderGroups();
+}
+
+function removeCondition(gIdx, cIdx) {
+    groups[gIdx].conditions.splice(cIdx, 1);
+    if (groups[gIdx].conditions.length === 0) {
+        groups.splice(gIdx, 1);
+    }
+    renderGroups();
+}
+
+function updateConditionField(gIdx, cIdx, value) {
+    groups[gIdx].conditions[cIdx].field     = value;
+    groups[gIdx].conditions[cIdx].value_id  = null;
+    groups[gIdx].conditions[cIdx].value_str = null;
+    renderGroups();
+}
+
+function updateConditionOperator(gIdx, cIdx, value) {
+    groups[gIdx].conditions[cIdx].operator = value;
+}
+
+function updateConditionValueId(gIdx, cIdx, value) {
+    groups[gIdx].conditions[cIdx].value_id  = value;
+    groups[gIdx].conditions[cIdx].value_str = null;
+}
+
+function updateConditionValueStr(gIdx, cIdx, value) {
+    groups[gIdx].conditions[cIdx].value_str = value;
+    groups[gIdx].conditions[cIdx].value_id  = null;
+}
+
+// ── Form submit ───────────────────────────────────────────────────────────────
+
+document.getElementById('ruleForm').addEventListener('submit', function () {
+    document.getElementById('conditions_json').value = JSON.stringify(groups);
+});
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+renderGroups();
+</script>

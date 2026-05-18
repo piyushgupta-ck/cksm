@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*.so
+.env
+# *.db and instance/ tracked for SQLite testing on Railway
+# *.db
+# instance/
+.webassets-cache
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+app/static/uploads/*
+!app/static/uploads/.gitkeep

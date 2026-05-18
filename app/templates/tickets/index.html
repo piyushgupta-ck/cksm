@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+{% block title %}Tickets{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Tickets</h1>
+    <a href="{{ url_for('tickets.create') }}"
+       class="rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500">
+        + New Ticket
+    </a>
+</div>
+
+<!-- Advanced filter bar -->
+<div class="bg-white shadow rounded-lg mb-6 p-4">
+    <form method="GET" class="space-y-3">
+        <!-- Row 1: Search + Status + Priority -->
+        <div class="flex flex-wrap gap-3 items-end">
+            <div class="flex-1 min-w-[200px]">
+                <label class="block text-xs font-medium text-gray-600 mb-1">Search</label>
+                <input type="text" name="search" value="{{ search }}"
+                       placeholder="Ticket ID or title…"
+                       class="block w-full rounded-md border-gray-300 ring-1 ring-gray-300 py-1.5 px-3 text-sm focus:ring-2 focus:ring-primary-500">
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Status</label>
+                <select name="status"
+                        class="rounded-md border-gray-300 ring-1 ring-gray-300 py-1.5 px-3 text-sm focus:ring-2 focus:ring-primary-500">
+                    <option value="">All Statuses</option>
+                    {% for s in ['Open','InProgress','Hold','Resolved','Rejected','Reopened','Closed'] %}
+                    <option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Priority</label>
+                <select name="priority"
+                        class="rounded-md border-gray-300 ring-1 ring-gray-300 py-1.5 px-3 text-sm focus:ring-2 focus:ring-primary-500">
+                    <option value="">All Priorities</option>
+                    {% for p in ['Critical','High','Medium','Low'] %}
+                    <option value="{{ p }}" {% if priority_filter == p %}selected{% endif %}>{{ p }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            {% if current_user.has_role('Admin') or current_user.has_role('Agent') %}
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Department</label>
+                <select name="department_id"
+                        class="rounded-md border-gray-300 ring-1 ring-gray-300 py-1.5 px-3 text-sm focus:ring-2 focus:ring-primary-500">
+                    <option value="0">All Depts</option>
+                    {% for d in departments %}
+                    <option value="{{ d.id }}" {% if dept_filter == d.id %}selected{% endif %}>{{ d.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Assignee</label>
+                <select name="assignee_id"
+                        class="rounded-md border-gray-300 ring-1 ring-gray-300 py-1.5 px-3 text-sm focus:ring-2 focus:ring-primary-500">
+                    <option value="0">Anyone</option>
+                    {% for a in agents %}
+                    <option value="{{ a.id }}" {% if assignee_filter == a.id %}selected{% endif %}>{{ a.full_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Row 2: Problem / Sub-Problem / Category / Sub-Category -->
+        <div class="flex flex-wrap gap-3 items-end">
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Problem</label>
+                <select name="problem_id"
+                        class="rounded-md border-gray-300 ring-1 ring-gray-300 py-1.5 px-3 text-sm focus:ring-2 focus:ring-primary-500">
+                    <option value="0">All Problems</option>
+                    {% for p in problems %}
+                    <option value="{{ p.id }}" {% if problem_filter == p.id %}selected{% endif %}>{{ p.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Sub-Problem</label>
+                <select name="sub_problem_id"
+                        class="rounded-md border-gray-300 ring-1 ring-gray-300 py-1.5 px-3 text-sm focus:ring-2 focus:ring-primary-500">
+                    <option value="0">All Sub-Problems</option>
+                    {% for sp in sub_problems %}
+                    <option value="{{ sp.id }}" {% if sub_problem_filter == sp.id %}selected{% endif %}>{{ sp.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Category</label>
+                <select name="category_id"
+                        class="rounded-md border-gray-300 ring-1 ring-gray-300 py-1.5 px-3 text-sm focus:ring-2 focus:ring-primary-500">
+                    <option value="0">All Categories</option>
+                    {% for c in categories %}
+                    <option value="{{ c.id }}" {% if category_filter == c.id %}selected{% endif %}>{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Sub-Category</label>
+                <select name="sub_category_id"
+                        class="rounded-md border-gray-300 ring-1 ring-gray-300 py-1.5 px-3 text-sm focus:ring-2 focus:ring-primary-500">
+                    <option value="0">All Sub-Categories</option>
+                    {% for sc in sub_categories %}
+                    <option value="{{ sc.id }}" {% if sub_category_filter == sc.id %}selected{% endif %}>{{ sc.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <!-- Row 3: Date range + buttons -->
+        <div class="flex flex-wrap gap-3 items-end">
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Created From</label>
+                <input type="date" name="date_from" value="{{ date_from }}"
+                       class="rounded-md border-gray-300 ring-1 ring-gray-300 py-1.5 px-3 text-sm focus:ring-2 focus:ring-primary-500">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Created To</label>
+                <input type="date" name="date_to" value="{{ date_to }}"
+                       class="rounded-md border-gray-300 ring-1 ring-gray-300 py-1.5 px-3 text-sm focus:ring-2 focus:ring-primary-500">
+            </div>
+            <div class="flex space-x-2">
+                <button type="submit"
+                        class="rounded-md bg-gray-700 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-600">
+                    Filter
+                </button>
+                <a href="{{ url_for('tickets.index') }}"
+                   class="rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50">
+                    Clear
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Results -->
+<div class="bg-white shadow rounded-lg overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ticket ID</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Priority</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Department</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Problem</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sub-Problem</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sub-Category</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Assigned To</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for ticket in tickets.items %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <a href="{{ url_for('tickets.view', ticket_id=ticket.ticket_id) }}"
+                           class="text-primary-600 hover:text-primary-800 font-medium">{{ ticket.ticket_id }}</a>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">{{ ticket.title }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
+                            {% if ticket.status == 'Open' %}bg-yellow-100 text-yellow-800
+                            {% elif ticket.status == 'InProgress' %}bg-blue-100 text-blue-800
+                            {% elif ticket.status == 'Hold' %}bg-orange-100 text-orange-800
+                            {% elif ticket.status == 'Resolved' %}bg-green-100 text-green-800
+                            {% elif ticket.status == 'Closed' %}bg-gray-100 text-gray-800
+                            {% elif ticket.status == 'Rejected' %}bg-red-100 text-red-800
+                            {% elif ticket.status == 'Reopened' %}bg-purple-100 text-purple-800
+                            {% endif %}">{{ ticket.status }}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
+                            {% if ticket.priority == 'Critical' %}bg-red-100 text-red-800
+                            {% elif ticket.priority == 'High' %}bg-orange-100 text-orange-800
+                            {% elif ticket.priority == 'Medium' %}bg-yellow-100 text-yellow-800
+                            {% else %}bg-green-100 text-green-800
+                            {% endif %}">{{ ticket.priority }}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ ticket.department.name }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ ticket.problem.name if ticket.problem else '—' }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ ticket.sub_problem.name if ticket.sub_problem else '—' }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ ticket.category.name if ticket.category else '—' }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ ticket.sub_category.name if ticket.sub_category else '—' }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ ticket.assignee.full_name if ticket.assignee else 'Unassigned' }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ ticket.created_at.strftime('%Y-%m-%d %H:%M') }}
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if not tickets.items %}
+                <tr>
+                    <td colspan="11" class="px-6 py-8 text-center text-sm text-gray-500">No tickets match the current filters.</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if tickets.pages > 1 %}
+    <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+        <p class="text-sm text-gray-700">
+            Showing <span class="font-medium">{{ ((tickets.page - 1) * tickets.per_page) + 1 }}</span>
+            to <span class="font-medium">{{ [tickets.page * tickets.per_page, tickets.total] | min }}</span>
+            of <span class="font-medium">{{ tickets.total }}</span> results
+        </p>
+        <nav class="inline-flex -space-x-px rounded-md shadow-sm">
+            {% for page_num in tickets.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+            {% if page_num %}
+            <a href="{{ url_for('tickets.index', page=page_num, status=status_filter, priority=priority_filter,
+                                department_id=dept_filter, assignee_id=assignee_filter,
+                                date_from=date_from, date_to=date_to, search=search,
+                                problem_id=problem_filter, sub_problem_id=sub_problem_filter,
+                                category_id=category_filter, sub_category_id=sub_category_filter) }}"
+               class="relative inline-flex items-center px-4 py-2 text-sm font-semibold
+               {% if page_num == tickets.page %}bg-primary-600 text-white{% else %}text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50{% endif %}">
+               {{ page_num }}
+            </a>
+            {% else %}
+            <span class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 ring-1 ring-inset ring-gray-300">…</span>
+            {% endif %}
+            {% endfor %}
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
